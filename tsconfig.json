@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "jsx": "preserve",
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "lib": ["esnext", "dom"],
+    "allowSyntheticDefaultImports": true,
+    "noImplicitAny": false,
+    "removeComments": true,
+    "allowJs": false,
+    "outDir": "./dist",
+    "skipLibCheck": true
+  },
+  
+  "ts-node": {
+    "esm": true,
+
+    "experimentalResolver": true,
+    "compilerOptions": {
+      "module": "NodeNext"
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.html", ".eslintrc.cjs", "vite.config.ts", ".development/reverse.js"]
+}
