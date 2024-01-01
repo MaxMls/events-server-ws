@@ -4,7 +4,6 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
-    "jsx": "preserve",
     "sourceMap": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
@@ -12,7 +11,7 @@
     "allowSyntheticDefaultImports": true,
     "noImplicitAny": false,
     "removeComments": true,
-    "allowJs": false,
+    "allowJs": true,
     "outDir": "./dist",
     "skipLibCheck": true
   },
@@ -25,5 +24,6 @@
       "module": "NodeNext"
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.html", ".eslintrc.cjs", "vite.config.ts", ".development/reverse.js"]
+  "exclude": ["node_modules", ".git"],
+  "include": ["**/*.ts", "**/*.d.ts", "**/*.html", "**/*.js", "**/*.cjs", ".eslintrc.cjs", ".development/reverse.js"],
 }

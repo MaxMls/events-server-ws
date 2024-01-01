@@ -1,8 +1,9 @@
 <template>
-  <div>
+  <div class="grid">
     <AppView />
-    <div></div>
-    app
+    <AppView />
+    <AppView />
+    <AppView />
   </div>
 </template>
 
@@ -16,3 +17,30 @@ export default defineComponent({
   },
 });
 </script>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+}
+
+#app {
+  height: 100dvh;
+}
+</style>
+
+<style scoped>
+.grid {
+  display: grid;
+
+  height: 100%;
+  grid-template-columns: 50% 50%;
+  grid-template-rows: 50% 50%;
+
+  gap: 1px;
+
+  background: #eee;
+  @media (prefers-color-scheme: dark) {
+    background: #333;
+  }
+}
+</style>

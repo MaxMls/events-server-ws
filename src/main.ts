@@ -6,6 +6,8 @@ import devcert from 'devcert';
 import { setInterval } from 'timers';
 import { fstat } from 'fs';
 import { fileURLToPath } from 'url';
+import { Room } from './room.js';
+import { TextDecoder } from 'util';
 
 const port = process.env.PORT ? +process.env.PORT : 80;
 const host = process.env.HOST ?? '0.0.0.0';
@@ -43,6 +45,8 @@ interface UserData {
   room: string;
 }
 
+const rooms = new Map<string, Room>();
+
 app.ws<UserData>('/*', {
   /* There are many common helper features */
   idleTimeout: 0,
@@ -61,9 +65,23 @@ app.ws<UserData>('/*', {
       }
       ws.close();
     }, idleTimeout);
+
+    if (message.byteLength === 0) {
+      return;
+    }
+
+    const room = rooms.get(ws.getUserData().room);
+    room?.message(new TextDecoder('utf8').decode(message));
+    app.publish(ws.getUserData().room, message, true);
   },
   open(ws) {
     ws.subscribe('ping');
+    const name = ws.getUserData().room;
+    ws.subscribe(name);
+
+    if (!rooms.has(name)) {
+      rooms.set(name, new Room(name));
+    }
 
     clearTimeout(ws.getUserData().reconnectTimeout);
     ws.getUserData().reconnectTimeout = setTimeout(() => {
@@ -98,7 +116,7 @@ app.ws<UserData>('/*', {
     );
 
     const url = req.getUrl();
-    const room = url.slice(1);
+    const room = url.slice(1) || 'default';
 
     if (room.length > 50 || !/^[a-zA-Z]*$/.test(room)) {
       res.writeStatus('400 Bad Request').endWithoutBody();
@@ -108,7 +126,7 @@ app.ws<UserData>('/*', {
     /* This immediately calls open handler, you must not use res after this call */
     res.upgrade(
       {
-        room,
+        room: `room-${room}`,
         url /* First argument is UserData (see WebSocket.getUserData()) */,
       },
       /* Spell these correctly */

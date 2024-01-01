@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon src/main.ts",
     "dev-demo": "vite --force",
-    "dev-reverse": "nodemon --watch  .development/reverse.js  .development/reverse.js",
+    "dev-reverse": "nodemon --watch _development/reverse.js _development/reverse.js",
     "build": "rm -rf dist && tsc && cp -rf src/assets dist",
     "start": "cd dist && node main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -35,7 +35,11 @@
     "typescript": "^5.3.3",
     "vite": "^5.0.10",
     "vue": "^3.3.13",
-    "vue-eslint-parser": "^9.3.2"
+    "vue-eslint-parser": "^9.3.2",
+    "@rushstack/eslint-patch": "^1.6.1",
+    "@vue/eslint-config-prettier": "^9.0.0",
+    "@vue/eslint-config-typescript": "^12.0.0",
+    "sass": "^1.69.6"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"

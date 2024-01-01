@@ -1,5 +1,5 @@
 import { createReadStream, createWriteStream } from 'fs';
-import { stat } from 'fs/promises';
+import { stat, writeFile } from 'fs/promises';
 // todo: compare readStream and read async
 
 const isASCII = (str: string) => {
@@ -8,7 +8,7 @@ const isASCII = (str: string) => {
 };
 
 export const storedArray = async (name: string) => {
-  const stats = await stat(name);
+  const stats = await stat(name).catch(() => ({ size: 0 }));
   const queueWriting: string[] = [];
   const writeStream = createWriteStream(name, { flags: 'a' });
 
@@ -51,30 +51,26 @@ export const storedArray = async (name: string) => {
     return Number.parseInt(rowIndexArray.join('')) + 1;
   };
 
-  let countOfRows = await findCountOfRows();
+  let countOfRows = stats.size ? await findCountOfRows() : 0;
   console.log({ countOfRows });
 
   return {
     get length(): number {
       return countOfRows;
     },
-    from(index) {
-      
-    },
-    async at(index) {
+    async at(index: number) {
       let left = 0;
       let right = stats.size;
 
       while (left < right) {
-        const position = left + Math.floor((right - left) / 2);
+        const start = left + Math.floor((right - left) / 2);
 
         const readStream = createReadStream(name, {
-          start: position,
+          start,
           highWaterMark: 1,
-          emitClose: false,
         });
 
-        const findStart = letter => {
+        const findStart = (letter: string) => {
           if (letter === '\n') {
             step.ref = readRowIndex;
             return false;
@@ -89,33 +85,38 @@ export const storedArray = async (name: string) => {
 
             if (rowIndex < index) {
               // right half
-              left = position + 1;
+              left = start + 1;
               return true;
             }
             if (rowIndex > index) {
               // left half
-              right = position;
+              right = start;
               return true;
             }
 
-            step.ref = readRowData;
+            step.done = true;
+            return true;
+            // step.ref = readRowData;
           }
           rowIndexArray.push(letter);
           return false;
         };
 
-        const rowData: string[] = [];
-        const readRowData = (letter: string) => {
-          if (letter === '\n') {
-            return true;
-          }
-          rowData.push(letter);
-          return false;
-        };
+        // const rowData: string[] = [];
+        // const readRowData = (letter: string) => {
+        //   if (letter === '\n') {
+        //     return true;
+        //   }
+        //   rowData.push(letter);
+        //   return false;
+        // };
 
-        const step = { ref: findStart };
+        const step = { ref: findStart, offset: 0, done: false };
 
-        for await (const buffer of readStream.iterator() as AsyncIterableIterator<Buffer>) {
+        for await (const buffer of readStream.iterator({
+          destroyOnReturn: true,
+        }) as AsyncIterableIterator<Buffer>) {
+          step.offset++;
           if (step.ref(buffer.toString('utf8'))) {
             break;
           }
@@ -123,15 +124,16 @@ export const storedArray = async (name: string) => {
 
         if (!rowIndexArray.length) {
           // left half
-          right = position;
+          right = start;
           continue;
         }
 
-        if (rowData.length) {
-          return rowData.join('');
+        if (step.done) {
+          return createReadStream(name, {
+            start: start + step.offset - rowIndexArray.length,
+          });
         }
       }
-      console.log({ left, right });
 
       throw new Error('not found 2');
     },

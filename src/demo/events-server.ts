@@ -31,13 +31,17 @@ export class EventsServer {
     this.ws.onmessage = this.message.bind(this);
   }
 
-  message(event: MessageEvent<Blob>) {
+  send(data) {
+    this.ws.send(JSON.stringify(data));
+  }
+
+  private message(event: MessageEvent<Blob>) {
     clearTimeout(this.reconnectTimeout);
     this.reconnectTimeout = this.setupTimeout();
 
     if (event.data.size === 0) {
       this.ws.send(event.data);
-      console.count('ping');
+      // console.count('ping');
       return;
     }
 
