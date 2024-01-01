@@ -40,6 +40,7 @@ setInterval(() => {
 interface UserData {
   reconnectTimeout: ReturnType<typeof setTimeout>;
   closed: boolean;
+  room: string;
 }
 
 app.ws<UserData>('/*', {
@@ -75,6 +76,8 @@ app.ws<UserData>('/*', {
   close(ws, code, message) {
     clearTimeout(ws.getUserData().reconnectTimeout);
     ws.getUserData().closed = true;
+    console.log('numSubscribers', app.numSubscribers(ws.getUserData().room));
+
     console.log('close');
   },
   ping(ws, message) {
@@ -89,12 +92,38 @@ app.ws<UserData>('/*', {
   subscription(ws, topic, newCount, oldCount) {
     console.log('subscription');
   },
+  upgrade: (res, req, context) => {
+    console.log(
+      'An Http connection wants to become WebSocket, URL: ' + req.getUrl() + '!'
+    );
+
+    const url = req.getUrl();
+    const room = url.slice(1);
+
+    if (room.length > 50 || !/^[a-zA-Z]*$/.test(room)) {
+      res.writeStatus('400 Bad Request').endWithoutBody();
+      return;
+    }
+
+    /* This immediately calls open handler, you must not use res after this call */
+    res.upgrade(
+      {
+        room,
+        url /* First argument is UserData (see WebSocket.getUserData()) */,
+      },
+      /* Spell these correctly */
+      req.getHeader('sec-websocket-key'),
+      req.getHeader('sec-websocket-protocol'),
+      req.getHeader('sec-websocket-extensions'),
+      context
+    );
+  },
   // upgrade(res, req, context) {
   //   console.log('upgrade');
   // },
 });
 
-app.get('/*', async (res, req) => {
+app.get('/*', (res, req) => {
   /* Can't return or yield from here without responding or attaching an abort handler */
   res.onAborted(() => {
     res.aborted = true;

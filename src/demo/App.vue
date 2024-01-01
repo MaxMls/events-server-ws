@@ -6,12 +6,13 @@
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from 'vue';
 import AppView from './AppView.vue';
-export default {
+export default defineComponent({
   name: 'App',
   components: {
     AppView,
   },
-};
+});
 </script>

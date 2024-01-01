@@ -58,6 +58,9 @@ export const storedArray = async (name: string) => {
     get length(): number {
       return countOfRows;
     },
+    from(index) {
+      
+    },
     async at(index) {
       let left = 0;
       let right = stats.size;
