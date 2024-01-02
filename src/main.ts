@@ -74,13 +74,34 @@ app.ws<UserData>('/*', {
     room?.message(new TextDecoder('utf8').decode(message));
     app.publish(ws.getUserData().room, message, true);
   },
-  open(ws) {
+  async open(ws) {
     ws.subscribe('ping');
     const name = ws.getUserData().room;
     ws.subscribe(name);
 
     if (!rooms.has(name)) {
       rooms.set(name, new Room(name));
+    }
+    const room = rooms.get(ws.getUserData().room);
+
+    try {
+      const readStream = await room?.storedArray.then(a => a.at(0));
+      readStream?.on('data', data => {
+        if (ws.getUserData().closed) {
+          readStream.close();
+          return;
+        }
+
+        const r = data
+          .toString('utf8')
+          .split('\n')
+          .map(s => s.split(' ').pop())
+          .join('');
+
+        ws.send(r, true);
+      });
+    } catch (error) {
+      console.warn(error);
     }
 
     clearTimeout(ws.getUserData().reconnectTimeout);

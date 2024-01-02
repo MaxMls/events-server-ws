@@ -14,45 +14,84 @@ export default defineComponent({
   setup() {
     return {
       eventsServer: new EventsServer(),
+    } as unknown as {
+      eventsServer: EventsServer;
+      context: CanvasRenderingContext2D;
+      animationFrame: number;
+      $refs: {
+        canvas: HTMLCanvasElement;
+        ctn: HTMLDivElement;
+      };
     };
   },
   mounted() {
     this.eventsServer.on('message', this.message);
     window.addEventListener('resize', this.resize);
     this.$refs.canvas.addEventListener('pointermove', this.move);
-    this.context = this.$refs.canvas.getContext('2d');
+    this.context = this.$refs.canvas.getContext(
+      '2d'
+    ) as CanvasRenderingContext2D;
+    this.context.lineWidth = 1;
 
+    const animationFrame = () => {
+      this.animationFrame = requestAnimationFrame(animationFrame);
+
+      this.context.stroke();
+    };
+    animationFrame();
     this.resize();
   },
   beforeUnmount() {
     window.removeEventListener('resize', this.resize);
     this.eventsServer.destroy();
+    cancelAnimationFrame(this.animationFrame);
   },
   methods: {
-    message(data: Blob) {
-      console.log(data);
+    message(data: number[]) {
+      const [fromX, fromY, toX, toY] = data;
+      const { offsetWidth: width, offsetHeight: height } = this.$refs.ctn;
 
-      // this.context.moveTo(offsetX - movementX, offsetY - movementY);
-      // this.context.lineTo(offsetX, offsetY);
-
-      // this.context.lineWidth = 1;
-      // this.context.stroke();
+      this.context.moveTo(fromX * width, fromY * height);
+      this.context.lineTo(toX * width, toY * height);
     },
     resize() {
+      const imageData = this.context.getImageData(
+        0,
+        0,
+        this.context.canvas.width,
+        this.context.canvas.height
+      );
+
       this.context.canvas.width = this.$refs.ctn.offsetWidth;
       this.context.canvas.height = this.$refs.ctn.offsetHeight;
+
+      this.context.putImageData(imageData, 0, 0);
+
+      this.context.drawImage(
+        this.context.canvas,
+        0,
+        0,
+        this.context.canvas.width,
+        this.context.canvas.height,
+        0,
+        0,
+        this.$refs.ctn.offsetWidth,
+        this.$refs.ctn.offsetHeight
+      );
     },
     move(event) {
       const { offsetX, offsetY, movementX, movementY } = event;
       // this.context.moveTo(offsetX - movementX, offsetY - movementY);
       // this.context.lineTo(offsetX, offsetY);
 
-      this.eventsServer.send([
-        (offsetX - movementX) / this.$refs.ctn.offsetWidth,
-        (offsetY - movementY) / this.$refs.ctn.offsetHeight,
-        offsetX / this.$refs.ctn.offsetWidth,
-        offsetY / this.$refs.ctn.offsetHeight,
-      ]);
+      this.eventsServer.send(
+        [
+          (offsetX - movementX) / this.$refs.ctn.offsetWidth,
+          (offsetY - movementY) / this.$refs.ctn.offsetHeight,
+          offsetX / this.$refs.ctn.offsetWidth,
+          offsetY / this.$refs.ctn.offsetHeight,
+        ].join(',') + ','
+      );
     },
   },
 });

@@ -25,5 +25,5 @@
     }
   },
   "exclude": ["node_modules", ".git"],
-  "include": ["**/*.ts", "**/*.d.ts", "**/*.html", "**/*.js", "**/*.cjs", ".eslintrc.cjs", ".development/reverse.js"],
+  "include": ["**/*.ts", "src/**/*.vue", "**/*.d.ts", "**/*.html", "**/*.js", "**/*.cjs", ".eslintrc.cjs", ".development/reverse.js"],
 }

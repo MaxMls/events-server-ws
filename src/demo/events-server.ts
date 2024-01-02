@@ -3,10 +3,93 @@ import { off } from 'process';
 const idleTimeout = 8000;
 const pingInterval = 4000;
 
+// parse floats stream
+class DataParser {
+  fromX;
+  fromY;
+  toX;
+  toY;
+  numberString = '';
+  numberIndex = 0;
+  numberStart = 0;
+  ondata?: (...params) => void;
+
+  constructor() {}
+
+  parse(string: Uint8Array) {
+    // const string = await data.text();
+
+    for (let index = 0; index < string.length; index++) {
+      if (string[index] !== ','.charCodeAt(0)) {
+        this.numberString += String.fromCharCode(string[index]);
+        continue;
+      }
+
+      const number = parseFloat(this.numberString);
+
+      switch (this.numberIndex % 4) {
+        case 0:
+          this.fromX = number;
+          break;
+        case 1:
+          this.fromY = number;
+          break;
+        case 2:
+          this.toX = number;
+          break;
+        case 3:
+          this.toY = number;
+          this.ondata?.([this.fromX, this.fromY, this.toX, this.toY]);
+          break;
+      }
+      this.numberString = '';
+      this.numberIndex++;
+    }
+  }
+}
+
+export class Sending {
+  receivedCount = 0;
+  sent: any[] = [];
+
+  constructor(
+    private readonly socket: WebSocket,
+    private queue: any[] = []
+  ) {}
+
+  open() {
+    while (this.queue.length) {
+      const data = this.queue.shift();
+      this.socket.send(data);
+      this.sent.push(data);
+    }
+  }
+
+  send(data) {
+    if (this.socket.readyState !== WebSocket.OPEN) {
+      this.queue.push(data);
+      return;
+    }
+
+    this.socket.send(data);
+    this.sent.push(data);
+  }
+
+  setReceivedOnServerCount(value) {
+    this.receivedCount = value;
+  }
+
+  destroy() {
+    const recent = this.sent.slice(this.receivedCount);
+    return [...recent, ...this.queue];
+  }
+}
+
 export class EventsServer {
   ws!: WebSocket;
+  dataParser!: DataParser;
+  sending!: Sending;
   reconnectTimeout?: NodeJS.Timeout;
-  messages = [];
   events = {
     message: [] as any[],
   };
@@ -26,31 +109,47 @@ export class EventsServer {
 
   private connect() {
     this.reconnectTimeout = this.setupTimeout();
-    this.ws = new WebSocket('wss://' + location.host);
-
+    this.ws = new WebSocket('wss://' + location.host, 'events-server');
+    this.sending = new Sending(this.ws);
+    this.dataParser = new DataParser();
     this.ws.onmessage = this.message.bind(this);
+    this.ws.onopen = this.open.bind(this);
+
+    this.dataParser.ondata = data => {
+      this.events.message.forEach(callback => {
+        callback(data);
+      });
+    };
+  }
+  open() {
+    this.sending.open();
   }
 
   send(data) {
-    this.ws.send(JSON.stringify(data));
+    this.sending.send(data);
   }
 
+  private pending = Promise.resolve();
   private message(event: MessageEvent<Blob>) {
     clearTimeout(this.reconnectTimeout);
     this.reconnectTimeout = this.setupTimeout();
 
     if (event.data.size === 0) {
       this.ws.send(event.data);
-      // console.count('ping');
+
       return;
     }
 
-    this.events.message.forEach(callback => {
-      callback(event.data);
-    });
+    this.pending = this.pending.then(() => this.parse(event.data));
   }
 
-  on(event: 'message', callback: () => void) {
+  async parse(data: Blob) {
+    for await (const chunk of data.stream()) {
+      this.dataParser.parse(chunk);
+    }
+  }
+
+  on(event: 'message', callback: (data: Blob) => void) {
     if (event === 'message') {
       this.events.message.push(callback);
     }
