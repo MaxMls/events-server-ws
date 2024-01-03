@@ -109,7 +109,10 @@ export class EventsServer {
 
   private connect() {
     this.reconnectTimeout = this.setupTimeout();
-    this.ws = new WebSocket('wss://' + location.host, 'events-server');
+    this.ws = new WebSocket('wss://' + location.host, [
+      'events-server',
+      'room1',
+    ]);
     this.ws.onmessage = this.message.bind(this);
     this.ws.onopen = this.open.bind(this);
     this.dataParser = new DataParser();

@@ -1,23 +1,18 @@
-/* Non-SSL is simply App() */
-import { readFile, writeFile } from 'fs/promises';
-import path from 'path';
 import uWebSockets, { DISABLED } from 'uWebSockets.js';
-import devcert from 'devcert';
 import { setInterval } from 'timers';
-import { fstat } from 'fs';
-import { fileURLToPath } from 'url';
 import { Room } from './room.js';
 import { TextDecoder } from 'util';
+import { storedArrayBinaryLog } from './data-storage-binary-log.js';
 
 const port = process.env.PORT ? +process.env.PORT : 80;
 const host = process.env.HOST ?? '0.0.0.0';
 
 // (async () => {
-//   const array = await storedArray('mememe');
+//   const array = await storedArrayBinaryLog('mememe');
 //   // await array.push('2e2e');
 
 //   for (let index = 0; index < 100; index++) {
-//     array.push(`${index}`);
+//     array.push(new TextEncoder().encode(`${index}`));
 //   }
 
 //   console.log('done');
@@ -29,7 +24,6 @@ const host = process.env.HOST ?? '0.0.0.0';
 //   }
 //   console.log('done 2');
 // })();
-console.log(1);
 
 const app = uWebSockets.App();
 const idleTimeout = 8000;
@@ -71,7 +65,7 @@ app.ws<UserData>('/*', {
     }
 
     const room = rooms.get(ws.getUserData().room);
-    room?.message(new TextDecoder('utf8').decode(message));
+    room?.message(message);
     app.publish(ws.getUserData().room, message, true);
   },
   async open(ws) {
@@ -82,23 +76,17 @@ app.ws<UserData>('/*', {
     if (!rooms.has(name)) {
       rooms.set(name, new Room(name));
     }
-    const room = rooms.get(ws.getUserData().room);
+    const room = rooms.get(ws.getUserData().room) as Room;
 
     try {
-      const readStream = await room?.storedArray.then(a => a.at(0));
-      readStream?.on('data', data => {
+      const readStream = await room.storedArray.then(a => a.at(0));
+      readStream.on('data', data => {
         if (ws.getUserData().closed) {
           readStream.close();
           return;
         }
 
-        const r = data
-          .toString('utf8')
-          .split('\n')
-          .map(s => s.split(' ').pop())
-          .join('');
-
-        ws.send(r, true);
+        ws.send(data, true);
       });
     } catch (error) {
       console.warn(error);
@@ -143,17 +131,22 @@ app.ws<UserData>('/*', {
       res.writeStatus('400 Bad Request').endWithoutBody();
       return;
     }
+    /* Spell these correctly */
+    const key = req.getHeader('sec-websocket-key');
+    const protocol = req.getHeader('sec-websocket-protocol').split(', ');
+    console.log(protocol);
+
+    const extensions = req.getHeader('sec-websocket-extensions');
 
     /* This immediately calls open handler, you must not use res after this call */
     res.upgrade(
       {
         room: `room-${room}`,
-        url /* First argument is UserData (see WebSocket.getUserData()) */,
+        url,
       },
-      /* Spell these correctly */
-      req.getHeader('sec-websocket-key'),
-      req.getHeader('sec-websocket-protocol'),
-      req.getHeader('sec-websocket-extensions'),
+      key,
+      protocol[0],
+      extensions,
       context
     );
   },

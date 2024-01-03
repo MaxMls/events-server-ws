@@ -1,13 +1,13 @@
-import { storedArray } from './data-storage.js';
+import { storedArrayBinaryLog } from './data-storage-binary-log.js';
 
 export class Room {
-  storedArray: ReturnType<typeof storedArray>;
+  storedArray: ReturnType<typeof storedArrayBinaryLog>;
 
   constructor(name) {
-    this.storedArray = storedArray('mememe');
+    this.storedArray = storedArrayBinaryLog('mememe');
   }
 
-  async message(data: string) {
+  async message(data: ArrayBuffer) {
     (await this.storedArray).push(data);
   }
 
