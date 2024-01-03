@@ -110,16 +110,16 @@ export class EventsServer {
   private connect() {
     this.reconnectTimeout = this.setupTimeout();
     this.ws = new WebSocket('wss://' + location.host, 'events-server');
-    this.sending = new Sending(this.ws);
-    this.dataParser = new DataParser();
     this.ws.onmessage = this.message.bind(this);
     this.ws.onopen = this.open.bind(this);
-
-    this.dataParser.ondata = data => {
-      this.events.message.forEach(callback => {
-        callback(data);
-      });
-    };
+    this.dataParser = new DataParser();
+    this.dataParser.ondata = this.data.bind(this);
+    this.sending = new Sending(this.ws, this.sending?.destroy());
+  }
+  data(data) {
+    this.events.message.forEach(callback => {
+      callback(data);
+    });
   }
   open() {
     this.sending.open();

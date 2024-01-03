@@ -1,4 +1,4 @@
-if (!ReadableStream.prototype[Symbol.asyncIterator]) {
+if (typeof ReadableStream[Symbol.iterator] !== 'function') {
   ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
     const reader = this.getReader();
     try {

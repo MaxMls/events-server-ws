@@ -37,6 +37,7 @@ export default defineComponent({
       this.animationFrame = requestAnimationFrame(animationFrame);
 
       this.context.stroke();
+      this.context.beginPath();
     };
     animationFrame();
     this.resize();
