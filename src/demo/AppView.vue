@@ -82,16 +82,14 @@ export default defineComponent({
     },
     move(event) {
       const { offsetX, offsetY, movementX, movementY } = event;
-      // this.context.moveTo(offsetX - movementX, offsetY - movementY);
-      // this.context.lineTo(offsetX, offsetY);
 
       this.eventsServer.send(
-        [
+        new Float32Array([
           (offsetX - movementX) / this.$refs.ctn.offsetWidth,
           (offsetY - movementY) / this.$refs.ctn.offsetHeight,
           offsetX / this.$refs.ctn.offsetWidth,
           offsetY / this.$refs.ctn.offsetHeight,
-        ].join(',') + ','
+        ]).buffer
       );
     },
   },

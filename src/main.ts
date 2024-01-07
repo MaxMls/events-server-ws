@@ -2,7 +2,12 @@ import uWebSockets, { DISABLED } from 'uWebSockets.js';
 import { setInterval } from 'timers';
 import { Room } from './room.js';
 import { TextDecoder } from 'util';
-import { storedArrayBinaryLog } from './data-storage-binary-log.js';
+import {
+  ESCAPE_CODE,
+  N_CODE,
+  readLine,
+  storedArrayBinaryLog,
+} from './data-storage-binary-log.js';
 
 const port = process.env.PORT ? +process.env.PORT : 80;
 const host = process.env.HOST ?? '0.0.0.0';
@@ -80,14 +85,26 @@ app.ws<UserData>('/*', {
 
     try {
       const readStream = await room.storedArray.then(a => a.at(0));
-      readStream.on('data', data => {
+
+      const chunk: number[] = [];
+      await readLine(readStream, (index, data) => {
         if (ws.getUserData().closed) {
           readStream.close();
-          return;
+          return true;
         }
 
-        ws.send(data, true);
+        for (const byte of data) {
+          if (byte === ESCAPE_CODE) {
+            chunk.push(ESCAPE_CODE);
+          }
+          chunk.push(byte);
+        }
+        chunk.push(ESCAPE_CODE, N_CODE);
+
+        return false;
       });
+
+      ws.send(new Uint8Array(chunk), true);
     } catch (error) {
       console.warn(error);
     }

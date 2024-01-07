@@ -11,7 +11,7 @@ export class Room {
     (await this.storedArray).push(data);
   }
 
-  async connection() {
-    (await this.storedArray).at(0);
-  }
+  // async connection() {
+  //   (await this.storedArray).at(0);
+  // }
 }
